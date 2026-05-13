@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KSA — Dashboard Đánh giá Sức khỏe Tài chính Doanh nghiệp</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<style>
+:root{
+  --gold:#C9A23A; --gold-dark:#9C7A1F; --gold-light:#F4E5B0;
+  --bg:#F7F5EF; --surface:#FFFFFF; --ink:#1F2937; --ink2:#475569; --ink3:#94A3B8;
+  --line:#E5E7EB;
+  --c-bs:#E8F3EE; --c-bs-d:#1F7A4D;       /* BS green */
+  --c-pl:#FFF1E0; --c-pl-d:#B85C00;       /* PL orange */
+  --c-cf:#EFE9F7; --c-cf-d:#5B2A8A;       /* CF purple */
+  --c-info:#E7F0FA; --c-info-d:#1F4E91;   /* info blue */
+  --ok:#1F7A4D; --warn:#B85C00; --bad:#B91C1C; --neutral:#475569;
+  --shadow:0 1px 2px rgba(0,0,0,0.04),0 2px 8px rgba(0,0,0,0.03);
+  --radius:10px; --radius-lg:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:1.5}
+header.appbar{display:flex;align-items:center;gap:16px;padding:14px 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{flex-shrink:0}
+.logo .brand{display:flex;flex-direction:column}
+.logo .brand b{font-family:'Cinzel','Trajan Pro','Times New Roman',serif;color:var(--gold-dark);font-size:20px;letter-spacing:0.05em;line-height:1}
+.logo .brand span{font-size:10px;color:var(--gold-dark);letter-spacing:0.02em}
+h1.appttl{flex:1;font-size:18px;margin:0;color:var(--ink);font-weight:600}
+.appbar .actions{display:flex;gap:8px}
+.btn{cursor:pointer;border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;color:var(--ink)}
+.btn:hover{background:#F1F5F9}
+.btn.primary{background:var(--gold);border-color:var(--gold-dark);color:#fff}
+.btn.primary:hover{background:var(--gold-dark)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink2)}
+nav.tabs{display:flex;gap:2px;padding:0 22px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{cursor:pointer;border:none;background:transparent;padding:14px 18px;font-size:14px;font-weight:500;color:var(--ink2);border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button.active{color:var(--gold-dark);border-bottom-color:var(--gold)}
+nav.tabs button:hover{color:var(--ink)}
+main{padding:22px;max-width:1400px;margin:0 auto}
+section.tab{display:none}
+section.tab.active{display:block}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.col{flex:1;min-width:260px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h3{margin:0 0 14px 0;font-size:15px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
+.card.zone-bs{background:var(--c-bs)}
+.card.zone-pl{background:var(--c-pl)}
+.card.zone-cf{background:var(--c-cf)}
+.card.zone-info{background:var(--c-info)}
+.card.zone-bs h3::before,.card.zone-pl h3::before,.card.zone-cf h3::before,.card.zone-info h3::before{
+  content:"";width:6px;height:18px;border-radius:3px;display:inline-block
+}
+.card.zone-bs h3::before{background:var(--c-bs-d)}
+.card.zone-pl h3::before{background:var(--c-pl-d)}
+.card.zone-cf h3::before{background:var(--c-cf-d)}
+.card.zone-info h3::before{background:var(--c-info-d)}
+
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:12px;color:var(--ink2);font-weight:500}
+.field input[type="number"],.field input[type="text"],.field select{
+  padding:8px 10px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;font-size:13px;font-family:inherit;color:var(--ink)
+}
+.field input:focus,.field select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,58,0.2)}
+.slider-wrap{display:flex;flex-direction:column;gap:2px}
+.slider-wrap .slider-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink2)}
+.slider-wrap .slider-val{font-weight:600;color:var(--gold-dark)}
+input[type="range"]{accent-color:var(--gold);width:100%}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:900px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+/* Vital signs */
+.health-hero{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:center}
+@media (max-width:900px){.health-hero{grid-template-columns:1fr}}
+.gauge-wrap{position:relative;width:260px;height:170px;margin:0 auto}
+.gauge-wrap .val{position:absolute;left:0;right:0;bottom:14px;text-align:center}
+.gauge-wrap .val b{font-size:42px;font-weight:700;color:var(--ink)}
+.gauge-wrap .val small{display:block;font-size:11px;color:var(--ink3);letter-spacing:0.08em}
+.vitals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:700px){.vitals{grid-template-columns:repeat(2,1fr)}}
+.vital{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.vital .lbl{font-size:11px;color:var(--ink3);letter-spacing:0.04em;text-transform:uppercase}
+.vital .v{font-size:20px;font-weight:600;color:var(--ink)}
+.vital .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500;width:fit-content}
+.badge.ok{background:#DCFCE7;color:var(--ok)}
+.badge.warn{background:#FEF3C7;color:var(--warn)}
+.badge.bad{background:#FEE2E2;color:var(--bad)}
+.badge.neutral{background:#F1F5F9;color:var(--neutral)}
+
+/* Ratio rows */
+.ratio-row{display:grid;grid-template-columns:1.6fr 1fr 2fr 2fr;gap:12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.ratio-row:last-child{border-bottom:none}
+.ratio-row .name{font-weight:500;color:var(--ink)}
+.ratio-row .name small{display:block;font-size:11px;color:var(--ink3);font-weight:400}
+.ratio-row .val{font-size:18px;font-weight:700;color:var(--ink);text-align:right}
+.ratio-row .bar{height:10px;background:#F1F5F9;border-radius:6px;position:relative;overflow:hidden}
+.ratio-row .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--gold)}
+.ratio-row .note{font-size:12px;color:var(--ink2);line-height:1.45}
+@media (max-width:900px){.ratio-row{grid-template-columns:1fr;gap:6px}.ratio-row .val{text-align:left}}
+
+/* Donut + chart */
+.chart-box{position:relative;height:240px}
+.chart-box-sm{position:relative;height:200px}
+
+/* Anchor list */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.toc a{text-decoration:none;font-size:12px;padding:6px 12px;background:#fff;border:1px solid var(--line);border-radius:20px;color:var(--ink2)}
+.toc a:hover{border-color:var(--gold);color:var(--gold-dark)}
+
+/* Valuation cards */
+.val-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+.val-card .ttl{font-size:12px;color:var(--ink3);letter-spacing:0.05em;text-transform:uppercase}
+.val-card .num{font-size:24px;font-weight:700;color:var(--ink);margin:6px 0}
+.val-card .hint{font-size:11px;color:var(--ink2)}
+
+/* Advisor */
+.adv-section{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.adv-section h4{margin:0 0 8px;font-size:14px;color:var(--gold-dark)}
+.adv-section ul{margin:0;padding-left:18px}
+.adv-section li{margin-bottom:6px;line-height:1.55}
+.adv-table{width:100%;border-collapse:collapse;margin-top:6px}
+.adv-table th,.adv-table td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left;font-size:12px}
+.adv-table th{background:var(--gold-light);color:var(--gold-dark);font-weight:600}
+
+/* Footer */
+footer.appfoot{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-top:1px solid var(--line);background:#fff;color:var(--ink2);font-size:12px}
+footer.appfoot .signed{color:var(--gold-dark);font-weight:600}
+
+/* Toolbar */
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.muted{color:var(--ink3)}
+.k{font-weight:600;color:var(--ink)}
+.flag{display:inline-block;padding:2px 6px;border-radius:5px;font-size:11px;font-weight:600}
+.flag.ok{background:#DCFCE7;color:var(--ok)}
+.flag.warn{background:#FEF3C7;color:var(--warn)}
+.flag.bad{background:#FEE2E2;color:var(--bad)}
+
+/* PDF print */
+@media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff;font-size:12px}
+  header.appbar,nav.tabs,.toolbar .no-print,#btnPDF,.btn{display:none !important}
+  footer.appfoot{display:none}
+  main{padding:0;max-width:none}
+  section.tab{display:block !important;page-break-after:always}
+  section.tab:last-child{page-break-after:auto}
+  .card{break-inside:avoid;box-shadow:none;border:1px solid #ddd}
+  .print-only{display:block}
+  .print-page{page-break-after:always}
+  .pdf-header{display:flex !important;justify-content:space-between;align-items:center;border-bottom:2px solid var(--gold);padding:6px 0;margin-bottom:10px}
+  .pdf-footer{display:flex !important;justify-content:space-between;font-size:10px;color:#666;border-top:1px solid #ddd;padding:4px 0;margin-top:10px}
+  .chart-box,.chart-box-sm{height:160px}
+}
+.print-only{display:none}
+.pdf-header,.pdf-footer{display:none}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="logo">
+    <!-- KindSight logo: 4-pointed star + serif gold text -->
+    <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#F4D773"/>
+          <stop offset="50%" stop-color="#C9A23A"/>
+          <stop offset="100%" stop-color="#9C7A1F"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 4 L54 46 L96 50 L54 54 L50 96 L46 54 L4 50 L46 46 Z" fill="url(#goldGrad)"/>
+    </svg>
+    <div class="brand"><b>KINDSIGHT</b><span>Timeless Wisdom · Modern Business</span></div>
+  </div>
+  <h1 class="appttl">Đánh giá Sức khỏe Tài chính Doanh nghiệp</h1>
+  <div class="actions">
+    <button class="btn ghost" id="btnReset">Reset</button>
+    <button class="btn ghost" id="btnLoadAZ">Demo AZ</button>
+    <button class="btn primary" id="btnPDF">Xuất PDF</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="input" class="active">1. Nhập liệu</button>
+  <button data-tab="overview">2. Tổng quan</button>
+  <button data-tab="detail">3. Phân tích chi tiết</button>
+  <button data-tab="valuation">4. Định giá DN</button>
+  <button data-tab="advisor">5. Nhận xét Advisor</button>
+</nav>
+
+<main>
+
+<!-- ============ TAB 1: INPUT ============ -->
+<section class="tab active" id="tab-input">
+
+<div class="card zone-info">
+  <h3>Thông tin chung</h3>
+  <div class="grid-3">
+    <div class="field"><label>Tên doanh nghiệp</label><input type="text" id="i_company" value="Công ty TNHH AZ"></div>
+    <div class="field"><label>Ngành nghề</label>
+      <select id="i_industry">
+        <option value="service">Dịch vụ / Đào tạo</option>
+        <option value="retail" selected>Bán lẻ / Phân phối</option>
+        <option value="manufacturing">Sản xuất</option>
+        <option value="fnb">F&B / Nhà hàng</option>
+        <option value="generic">Khác</option>
+      </select>
+    </div>
+    <div class="field"><label>Kỳ phân tích</label>
+      <select id="i_period">
+        <option value="month">Tháng</option>
+        <option value="quarter">Quý</option>
+        <option value="year" selected>Năm (hoặc lũy kế)</option>
+      </select>
+    </div>
+    <div class="field"><label>Đơn vị tiền</label>
+      <select id="i_unit">
+        <option value="1000000">Triệu VND</option>
+        <option value="1000000000" selected>Tỷ VND</option>
+      </select>
+    </div>
+    <div class="field"><label>Năm tài chính</label><input type="number" id="i_year" value="2022"></div>
+    <div class="field"><label>Số cổ phần lưu hành (nếu có)</label><input type="number" id="i_shares" value="0" step="1"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="card zone-bs">
+      <h3>Bảng cân đối kế toán — Tài sản</h3>
+      <div class="grid-2">
+        <div class="field"><label>Tiền và tương đương tiền</label><input type="number" class="i" id="i_cash" value="13.48" step="0.01"></div>
+        <div class="field"><label>Đầu tư ngắn hạn</label><input type="number" class="i" id="i_stinv" value="0" step="0.01"></div>
+        <div class="field"><label>Phải thu khách hàng</label><input type="number" class="i" id="i_ar" value="13.49" step="0.01"></div>
+        <div class="field"><label>Hàng tồn kho</label><input type="number" class="i" id="i_inv" value="28.47" step="0.01"></div>
+        <div class="field"><label>Tài sản ngắn hạn khác</label><input type="number" class="i" id="i_otherca" value="5.91" step="0.01"></div>
+        <div class="field"><label>Tài sản cố định (giá trị còn lại)</label><input type="number" class="i" id="i_fa" value="0.91" step="0.01"></div>
+        <div class="field"><label>Đầu tư dài hạn</label><input type="number" class="i" id="i_ltinv" value="2.00" step="0.01"></div>
+        <div class="field"><label>Tài sản dài hạn khác</label><input type="number" class="i" id="i_otherla" value="0" step="0.01"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card zone-bs">
+      <h3>Bảng cân đối kế toán — Nguồn vốn</h3>
+      <div class="grid-2">
+        <div class="field"><label>Vay & nợ ngắn hạn (ngân hàng)</label><input type="number" class="i" id="i_stdebt" value="0" step="0.01"></div>
+        <div class="field"><label>Phải trả người bán</label><input type="number" class="i" id="i_ap" value="0.93" step="0.01"></div>
+        <div class="field"><label>Nợ ngắn hạn khác</label><input type="number" class="i" id="i_otherstl" value="2.39" step="0.01"></div>
+        <div class="field"><label>Vay & nợ dài hạn</label><input type="number" class="i" id="i_ltdebt" value="0" step="0.01"></div>
+        <div class="field"><label>Nợ dài hạn khác</label><input type="number" class="i" id="i_otherltl" value="0" step="0.01"></div>
+        <div class="field"><label>Vốn điều lệ / Vốn chủ sở hữu</label><input type="number" class="i" id="i_capital" value="14.17" step="0.01"></div>
+        <div class="field"><label>Lợi nhuận chưa phân phối</label><input type="number" class="i" id="i_retained" value="46.87" step="0.01"></div>
+      </div>
+      <div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed var(--c-bs-d);border-radius:8px;font-size:12px">
+        <span class="muted">Tổng tài sản:</span> <b id="o_ta">—</b> |
+        <span class="muted">Tổng nguồn vốn:</span> <b id="o_te">—</b> |
+        <span class="muted">Chênh lệch:</span> <b id="o_diff">—</b>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="card zone-pl">
+      <h3>Kết quả kinh doanh</h3>
+      <div class="grid-2">
+        <div class="field"><label>Doanh thu thuần</label><input type="number" class="i" id="i_rev" value="46.54" step="0.01"></div>
+        <div class="field"><label>Giá vốn hàng bán</label><input type="number" class="i" id="i_cogs" value="34.08" step="0.01"></div>
+        <div class="field"><label>Chi phí biến đổi (vận hành)</label><input type="number" class="i" id="i_vc" value="1.49" step="0.01"></div>
+        <div class="field"><label>Chi phí cố định (vận hành)</label><input type="number" class="i" id="i_fc" value="6.99" step="0.01"></div>
+        <div class="field"><label>Khấu hao TSCĐ</label><input type="number" class="i" id="i_dep" value="0.13" step="0.01"></div>
+        <div class="field"><label>Chi phí lãi vay</label><input type="number" class="i" id="i_int" value="0" step="0.01"></div>
+        <div class="field"><label>Thu nhập khác (ròng)</label><input type="number" class="i" id="i_other_inc" value="-0.61" step="0.01"></div>
+        <div class="field"><label>Thuế TNDN (chi phí)</label><input type="number" class="i" id="i_tax" value="0" step="0.01"></div>
+      </div>
+      <div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed var(--c-pl-d);border-radius:8px;font-size:12px">
+        <span class="muted">Lợi nhuận gộp:</span> <b id="o_gp">—</b> |
+        <span class="muted">EBITDA:</span> <b id="o_ebitda">—</b> |
+        <span class="muted">Lợi nhuận sau thuế:</span> <b id="o_ni">—</b>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card zone-cf">
+      <h3>Dòng tiền & Giả định định giá</h3>
+      <div class="grid-2">
+        <div class="field"><label>Dòng tiền HĐ kinh doanh (CFO)</label><input type="number" class="i" id="i_cfo" value="9.06" step="0.01"></div>
+        <div class="field"><label>Dòng tiền HĐ đầu tư (CFI)</label><input type="number" class="i" id="i_cfi" value="-0.39" step="0.01"></div>
+        <div class="field"><label>Dòng tiền HĐ tài chính (CFF)</label><input type="number" class="i" id="i_cff" value="-1.00" step="0.01"></div>
+        <div class="field"><label>Doanh thu kỳ trước (so sánh)</label><input type="number" class="i" id="i_rev_prev" value="42.30" step="0.01"></div>
+        <div class="field"><label>Lợi nhuận sau thuế kỳ trước</label><input type="number" class="i" id="i_ni_prev" value="2.51" step="0.01"></div>
+        <div class="field"><label>Giá đơn vị bán (nếu có 1 SP chính)</label><input type="number" class="i" id="i_price" value="0" step="0.001"></div>
+      </div>
+      <div class="grid-2" style="margin-top:8px">
+        <div class="slider-wrap">
+          <div class="slider-head"><span>Tăng trưởng kỳ vọng (g)</span><span class="slider-val" id="sv_g">5%</span></div>
+          <input type="range" class="i" id="i_g" min="0" max="30" step="0.5" value="5">
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-head"><span>Tỷ suất chiết khấu (WACC)</span><span class="slider-val" id="sv_wacc">12%</span></div>
+          <input type="range" class="i" id="i_wacc" min="8" max="25" step="0.5" value="12">
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-head"><span>P/B đa ngành</span><span class="slider-val" id="sv_pb">1.5x</span></div>
+          <input type="range" class="i" id="i_pb_mult" min="0.5" max="5" step="0.1" value="1.5">
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-head"><span>EV/EBITDA multiple</span><span class="slider-val" id="sv_ev">6x</span></div>
+          <input type="range" class="i" id="i_ev_mult" min="3" max="15" step="0.5" value="6">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</section>
+
+<!-- ============ TAB 2: OVERVIEW ============ -->
+<section class="tab" id="tab-overview">
+  <div class="pdf-header"><span><b id="pdf_h_co">—</b> · Sức khỏe Tài chính · <span id="pdf_h_kp">—</span></span><span>Trang Tổng quan</span></div>
+
+  <div class="card">
+    <h3>Sức khỏe tài chính tổng thể</h3>
+    <div class="health-hero">
+      <div>
+        <div class="gauge-wrap">
+          <canvas id="gauge"></canvas>
+          <div class="val"><b id="hs_val">—</b><small>HEALTH SCORE / 100</small></div>
+        </div>
+        <div style="text-align:center;margin-top:6px"><span class="flag" id="hs_flag">—</span></div>
+      </div>
+      <div class="vitals">
+        <div class="vital"><span class="lbl">Thanh khoản</span><span class="v" id="v_liq">—</span><span class="badge" id="b_liq">—</span></div>
+        <div class="vital"><span class="lbl">Đòn bẩy</span><span class="v" id="v_lev">—</span><span class="badge" id="b_lev">—</span></div>
+        <div class="vital"><span class="lbl">Sinh lời</span><span class="v" id="v_prof">—</span><span class="badge" id="b_prof">—</span></div>
+        <div class="vital"><span class="lbl">Hiệu quả</span><span class="v" id="v_eff">—</span><span class="badge" id="b_eff">—</span></div>
+        <div class="vital"><span class="lbl">Tăng trưởng</span><span class="v" id="v_grw">—</span><span class="badge" id="b_grw">—</span></div>
+        <div class="vital"><span class="lbl">Z-score Altman</span><span class="v" id="v_z">—</span><span class="badge" id="b_z">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col"><div class="card"><h3>Cơ cấu tài sản</h3><div class="chart-box"><canvas id="c_asset"></canvas></div></div></div>
+    <div class="col"><div class="card"><h3>Cơ cấu nguồn vốn</h3><div class="chart-box"><canvas id="c_equity"></canvas></div></div></div>
+    <div class="col"><div class="card"><h3>Doanh thu vs Lợi nhuận</h3><div class="chart-box"><canvas id="c_revprofit"></canvas></div></div></div>
+  </div>
+
+  <div class="card">
+    <h3>Diễn giải tự động — Sức khỏe tổng thể</h3>
+    <div id="overview_narr" style="line-height:1.7;color:var(--ink2)">—</div>
+  </div>
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</section>
+
+<!-- ============ TAB 3: DETAIL ============ -->
+<section class="tab" id="tab-detail">
+
+<div class="card no-print">
+  <div class="toc">
+    <a href="#sec-liq">Thanh khoản</a>
+    <a href="#sec-lev">Đòn bẩy</a>
+    <a href="#sec-prof">Sinh lời</a>
+    <a href="#sec-eff">Hiệu quả</a>
+    <a href="#sec-bep">Điểm hòa vốn</a>
+    <a href="#sec-grw">Tăng trưởng</a>
+    <a href="#sec-z">Z-score Altman</a>
+  </div>
+</div>
+
+<!-- 3.1 -->
+<div class="card print-page" id="sec-liq">
+  <div class="pdf-header"><span><b class="pdf_co">—</b> · Thanh khoản & Đòn bẩy</span><span>Trang 3</span></div>
+  <h3>3.1 Tính thanh khoản</h3>
+  <div id="liq_rows"></div>
+</div>
+
+<!-- 3.2 -->
+<div class="card" id="sec-lev">
+  <h3>3.2 Đòn bẩy & Cơ cấu vốn</h3>
+  <div id="lev_rows"></div>
+  <div id="match_rule" style="margin-top:10px;padding:10px;border-radius:8px;font-size:13px"></div>
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</div>
+
+<!-- 3.3 -->
+<div class="card print-page" id="sec-prof">
+  <div class="pdf-header"><span><b class="pdf_co">—</b> · Sinh lời & DuPont</span><span>Trang 4</span></div>
+  <h3>3.3 Khả năng sinh lời</h3>
+  <div id="prof_rows"></div>
+  <div style="margin-top:14px">
+    <h3 style="font-size:13px">Phân tích DuPont: ROE = ROS × Vòng quay TS × Đòn bẩy tài chính</h3>
+    <div class="chart-box"><canvas id="c_dupont"></canvas></div>
+  </div>
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</div>
+
+<!-- 3.4 + 3.5 -->
+<div class="card print-page" id="sec-eff">
+  <div class="pdf-header"><span><b class="pdf_co">—</b> · Hiệu quả vận hành</span><span>Trang 5</span></div>
+  <h3>3.4 Hiệu quả hoạt động — Vòng quay tiền</h3>
+  <div id="eff_rows"></div>
+  <div style="margin-top:10px">
+    <div class="chart-box-sm"><canvas id="c_cashgap"></canvas></div>
+  </div>
+</div>
+
+<div class="card" id="sec-bep">
+  <h3>3.5 Điểm hòa vốn (BEP)</h3>
+  <div class="grid-3">
+    <div class="val-card"><div class="ttl">Doanh thu hòa vốn</div><div class="num" id="bep_rev">—</div><div class="hint">FC ÷ (1 − VC/Doanh thu)</div></div>
+    <div class="val-card"><div class="ttl">Sản lượng hòa vốn</div><div class="num" id="bep_q">—</div><div class="hint">FC ÷ (Giá − Biến phí đơn vị)</div></div>
+    <div class="val-card"><div class="ttl">Biên an toàn (MoS)</div><div class="num" id="bep_mos">—</div><div class="hint">(DT thực − DT hòa vốn) ÷ DT thực</div></div>
+  </div>
+  <div class="chart-box" style="margin-top:14px"><canvas id="c_bep"></canvas></div>
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</div>
+
+<!-- 3.6 + 3.7 -->
+<div class="card print-page" id="sec-grw">
+  <div class="pdf-header"><span><b class="pdf_co">—</b> · Tăng trưởng & Rủi ro</span><span>Trang 6</span></div>
+  <h3>3.6 Tăng trưởng</h3>
+  <div class="grid-3" id="grw_cards"></div>
+</div>
+
+<div class="card" id="sec-z">
+  <h3>3.7 Z-score Altman — Rủi ro phá sản</h3>
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;align-items:center">
+    <div class="val-card"><div class="ttl">Z-score</div><div class="num" id="z_val">—</div><div class="hint" id="z_zone">—</div></div>
+    <div>
+      <div class="chart-box-sm"><canvas id="c_zscore"></canvas></div>
+      <div style="font-size:12px;color:var(--ink2);margin-top:6px" id="z_explain">—</div>
+    </div>
+  </div>
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</div>
+
+</section>
+
+<!-- ============ TAB 4: VALUATION ============ -->
+<section class="tab" id="tab-valuation">
+  <div class="pdf-header"><span><b class="pdf_co">—</b> · Định giá Doanh nghiệp</span><span>Trang 7</span></div>
+  <div class="card">
+    <h3>Định giá doanh nghiệp — 4 phương pháp</h3>
+    <div class="grid-4" style="margin-bottom:14px">
+      <div class="val-card"><div class="ttl">NAV — Tài sản ròng</div><div class="num" id="val_nav">—</div><div class="hint">Tổng TS − Tổng nợ phải trả</div></div>
+      <div class="val-card"><div class="ttl">P/B</div><div class="num" id="val_pb">—</div><div class="hint">VCSH × P/B multiple</div></div>
+      <div class="val-card"><div class="ttl">EV/EBITDA</div><div class="num" id="val_ev">—</div><div class="hint">EBITDA × multiple − Nợ ròng</div></div>
+      <div class="val-card"><div class="ttl">DCF rút gọn</div><div class="num" id="val_dcf">—</div><div class="hint">FCF×(1+g) ÷ (WACC−g)</div></div>
+    </div>
+    <div class="chart-box"><canvas id="c_valuation"></canvas></div>
+    <div style="margin-top:14px;padding:12px;background:var(--c-info);border-radius:10px">
+      <b>Khoảng giá trị doanh nghiệp:</b> <span id="val_range">—</span> · <b>Trung bình:</b> <span id="val_avg">—</span>
+      <div style="font-size:12px;color:var(--ink2);margin-top:4px" id="val_note">—</div>
+    </div>
+  </div>
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</section>
+
+<!-- ============ TAB 5: ADVISOR ============ -->
+<section class="tab" id="tab-advisor">
+  <div class="pdf-header"><span><b class="pdf_co">—</b> · Nhận xét Chuyên gia</span><span>Trang 8</span></div>
+
+  <div class="adv-section">
+    <h4>Tóm tắt sức khỏe doanh nghiệp</h4>
+    <div id="adv_summary">—</div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <div class="adv-section">
+        <h4>Điểm mạnh</h4>
+        <ul id="adv_strengths"></ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="adv-section">
+        <h4>Điểm cần lưu ý</h4>
+        <ul id="adv_risks"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="adv-section">
+    <h4>Khuyến nghị hành động 30 / 60 / 90 ngày</h4>
+    <table class="adv-table">
+      <thead><tr><th>30 ngày — Quick wins</th><th>60 ngày — Củng cố</th><th>90 ngày — Chiến lược</th></tr></thead>
+      <tbody><tr><td id="adv_30">—</td><td id="adv_60">—</td><td id="adv_90">—</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="adv-section">
+    <h4>Câu hỏi coaching gợi mở</h4>
+    <ol id="adv_questions"></ol>
+  </div>
+
+  <div class="adv-section" style="background:var(--c-info)">
+    <h4>Chữ ký Business Coach</h4>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px">
+      <div style="font-size:12px;color:var(--ink2)">
+        <div>Ngày đánh giá: <b id="sig_date">—</b></div>
+        <div>Doanh nghiệp được đánh giá: <b id="sig_co">—</b></div>
+        <div style="margin-top:6px;font-style:italic;color:var(--ink3)">Báo cáo này được lập với mục đích coaching và tham khảo. Số liệu cần được kiểm chứng bởi kế toán/kiểm toán độc lập.</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Brush Script MT','Lucida Handwriting',cursive;font-size:28px;color:var(--gold-dark);transform:rotate(-3deg);border-bottom:1px solid var(--gold);padding:0 12px 4px">Boul Thái</div>
+        <div style="font-size:12px;color:var(--gold-dark);font-weight:600;margin-top:4px">Business Coach · KindSight Academy</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pdf-footer"><span>KindSight Academy · Đánh giá Sức khỏe Tài chính DN</span><span>Business Coach Boul Thái</span></div>
+</section>
+
+</main>
+
+<footer class="appfoot">
+  <span>© KindSight Academy · Timeless Wisdom · Modern Business</span>
+  <span class="signed">Business Coach Boul Thái</span>
+</footer>
+
+<script>
+/* ============================================================
+   FINANCIAL HEALTH DASHBOARD — KindSight Academy
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const fmt = (n, unit) => {
+  if(!isFinite(n) || n===null || n===undefined) return '—';
+  const u = unit || '';
+  if(Math.abs(n) >= 1000) return (n/1000).toFixed(2)+'K '+u;
+  return n.toFixed(2)+' '+u;
+};
+const pct = n => isFinite(n) ? (n*100).toFixed(1)+'%' : '—';
+const num = n => isFinite(n) ? n.toFixed(2) : '—';
+const days = n => isFinite(n) ? Math.round(n)+' ngày' : '—';
+
+/* AZ demo data — Tỷ VND, lũy kế T1-T6 và tồn cuối T6 */
+const AZ_DEMO = {
+  i_company:'Công ty TNHH AZ', i_industry:'retail', i_period:'year', i_unit:'1000000000', i_year:2022, i_shares:0,
+  i_cash:13.48, i_stinv:0, i_ar:13.49, i_inv:28.47, i_otherca:5.91, i_fa:0.91, i_ltinv:2.00, i_otherla:0,
+  i_stdebt:0, i_ap:0.93, i_otherstl:2.39, i_ltdebt:0, i_otherltl:0, i_capital:14.17, i_retained:46.87,
+  i_rev:46.54, i_cogs:34.08, i_vc:1.49, i_fc:6.99, i_dep:0.13, i_int:0, i_other_inc:-0.61, i_tax:0,
+  i_cfo:9.06, i_cfi:-0.39, i_cff:-1.00, i_rev_prev:42.30, i_ni_prev:2.51, i_price:0,
+  i_g:5, i_wacc:12, i_pb_mult:1.5, i_ev_mult:6
+};
+
+function loadAZ(){
+  for(const k in AZ_DEMO){
+    const el = $(k);
+    if(el){ el.value = AZ_DEMO[k]; }
+  }
+  refresh();
+}
+
+function getInputs(){
+  const v = id => parseFloat($(id).value) || 0;
+  return {
+    company: $('i_company').value, industry: $('i_industry').value, period: $('i_period').value,
+    year: v('i_year'), shares: v('i_shares'),
+    cash:v('i_cash'), stinv:v('i_stinv'), ar:v('i_ar'), inv:v('i_inv'), otherca:v('i_otherca'),
+    fa:v('i_fa'), ltinv:v('i_ltinv'), otherla:v('i_otherla'),
+    stdebt:v('i_stdebt'), ap:v('i_ap'), otherstl:v('i_otherstl'),
+    ltdebt:v('i_ltdebt'), otherltl:v('i_otherltl'),
+    capital:v('i_capital'), retained:v('i_retained'),
+    rev:v('i_rev'), cogs:v('i_cogs'), vc:v('i_vc'), fc:v('i_fc'),
+    dep:v('i_dep'), int_:v('i_int'), other_inc:v('i_other_inc'), tax:v('i_tax'),
+    cfo:v('i_cfo'), cfi:v('i_cfi'), cff:v('i_cff'),
+    rev_prev:v('i_rev_prev'), ni_prev:v('i_ni_prev'), price:v('i_price'),
+    g:v('i_g')/100, wacc:v('i_wacc')/100, pb_mult:v('i_pb_mult'), ev_mult:v('i_ev_mult')
+  };
+}
+
+function compute(I){
+  // Balance sheet aggregates
+  const CA = I.cash + I.stinv + I.ar + I.inv + I.otherca;
+  const NCA = I.fa + I.ltinv + I.otherla;
+  const TA = CA + NCA;
+  const CL = I.stdebt + I.ap + I.otherstl;
+  const NCL = I.ltdebt + I.otherltl;
+  const TL = CL + NCL;
+  const equity = I.capital + I.retained;
+  const totalEquityLiab = TL + equity;
+  const totalDebt = I.stdebt + I.ltdebt;
+  const netDebt = totalDebt - I.cash;
+
+  // P&L
+  const gp = I.rev - I.cogs;
+  const opCost = I.vc + I.fc;
+  const opIncome = gp - opCost + I.other_inc; // operating
+  const ebit = opIncome; // simplified: before interest, after dep already in fc
+  const ebitda = ebit + I.dep;
+  const ebt = ebit - I.int_;
+  const ni = ebt - I.tax;
+
+  // Periods per year for annualization (1 if year, 4 if quarter, 12 if month)
+  const perFactor = I.period==='month' ? 12 : I.period==='quarter' ? 4 : 1;
+
+  // Liquidity
+  const current = CL>0 ? CA/CL : Infinity;
+  const quick = CL>0 ? (CA - I.inv)/CL : Infinity;
+  const cashRatio = CL>0 ? (I.cash + I.stinv)/CL : Infinity;
+
+  // Leverage
+  const de = equity>0 ? totalDebt/equity : Infinity;
+  const da = TA>0 ? TL/TA : 0;
+  const intCov = I.int_>0 ? ebit/I.int_ : (ebit>0 ? Infinity : 0);
+
+  // Profitability
+  const ros = I.rev>0 ? ni/I.rev : 0;
+  const grossMargin = I.rev>0 ? gp/I.rev : 0;
+  const roa = TA>0 ? ni/TA : 0;
+  const roe = equity>0 ? ni/equity : 0;
+  const invCap = equity + totalDebt;
+  const roic = invCap>0 ? ebit*(1-(I.tax/Math.max(ebt,0.0001)))/invCap : 0;
+
+  // Efficiency / Activity (annualized days)
+  const yearRev = I.rev * perFactor;
+  const yearCogs = I.cogs * perFactor;
+  const dso = yearRev>0 ? I.ar*365/yearRev : 0;
+  const dio = yearCogs>0 ? I.inv*365/yearCogs : 0;
+  const dpo = yearCogs>0 ? I.ap*365/yearCogs : 0;
+  const cashgap = dso + dio - dpo;
+  const assetTurnover = TA>0 ? yearRev/TA : 0;
+  const invTurnover = I.inv>0 ? yearCogs/I.inv : 0;
+
+  // Growth
+  const revGrow = I.rev_prev>0 ? (I.rev - I.rev_prev)/I.rev_prev : 0;
+  const niGrow = I.ni_prev>0 ? (ni - I.ni_prev)/I.ni_prev : (ni>0 ? 1 : 0);
+
+  // BEP
+  const cmRatio = I.rev>0 ? (I.rev - I.cogs - I.vc)/I.rev : 0; // contribution margin ratio
+  const bepRev = cmRatio>0 ? I.fc/cmRatio : Infinity;
+  const mos = I.rev>0 ? (I.rev - bepRev)/I.rev : 0;
+  let bepQ = NaN;
+  if(I.price>0 && I.rev>0){
+    const unitsSold = I.rev/I.price;
+    const vcPerUnit = (I.cogs + I.vc)/unitsSold;
+    const cm = I.price - vcPerUnit;
+    if(cm>0) bepQ = I.fc/cm;
+  }
+
+  // Z-score Altman (private/SME, manufacturing)
+  // For non-manufacturing: Z'' = 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4
+  // Private mfg: Z' = 0.717*X1 + 0.847*X2 + 3.107*X3 + 0.420*X4 + 0.998*X5
+  const wc = CA - CL;
+  const X1 = TA>0 ? wc/TA : 0;
+  const X2 = TA>0 ? I.retained/TA : 0;
+  const X3 = TA>0 ? ebit/TA : 0;
+  const X4 = TL>0 ? equity/TL : (equity>0 ? 5 : 0);
+  const X5 = TA>0 ? yearRev/TA : 0;
+  let zScore, zZone, zZoneLabel;
+  if(I.industry==='manufacturing'){
+    zScore = 0.717*X1 + 0.847*X2 + 3.107*X3 + 0.42*X4 + 0.998*X5;
+    if(zScore>=2.9){zZone='safe';zZoneLabel='Vùng an toàn'}
+    else if(zScore>=1.23){zZone='grey';zZoneLabel='Vùng xám — theo dõi'}
+    else{zZone='distress';zZoneLabel='Vùng nguy hiểm phá sản'}
+  } else {
+    zScore = 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4;
+    if(zScore>=2.6){zZone='safe';zZoneLabel='Vùng an toàn'}
+    else if(zScore>=1.1){zZone='grey';zZoneLabel='Vùng xám — theo dõi'}
+    else{zZone='distress';zZoneLabel='Vùng nguy hiểm phá sản'}
+  }
+
+  // Valuation
+  const navVal = TA - TL;
+  const pbVal = equity * I.pb_mult;
+  const evVal = ebitda*perFactor * I.ev_mult - netDebt;
+  const fcf = I.cfo + I.cfi; // simplified
+  const dcfVal = (I.wacc - I.g) > 0.01 ? fcf*perFactor * (1 + I.g) / (I.wacc - I.g) : NaN;
+
+  return {
+    CA, NCA, TA, CL, NCL, TL, equity, totalEquityLiab, totalDebt, netDebt,
+    gp, opCost, opIncome, ebit, ebitda, ebt, ni,
+    current, quick, cashRatio, de, da, intCov,
+    ros, grossMargin, roa, roe, roic,
+    dso, dio, dpo, cashgap, assetTurnover, invTurnover,
+    revGrow, niGrow,
+    cmRatio, bepRev, mos, bepQ,
+    X1,X2,X3,X4,X5, zScore, zZone, zZoneLabel,
+    navVal, pbVal, evVal, fcfAnnual: fcf*perFactor, dcfVal,
+    perFactor, fcf
+  };
+}
+
+/* ===== Scoring functions: each returns 0..100 ===== */
+function scoreLiq(M){
+  // best at current 1.5..3, penalize <1 (illiquid) and >5 (over-conservative)
+  const c = M.current;
+  if(!isFinite(c)) return 60; // no debt, neutral
+  if(c<1) return Math.max(0, 30*c);
+  if(c<=1.5) return 50 + (c-1)*40; // 50..70
+  if(c<=3) return 70 + (c-1.5)*20/1.5; // 70..90
+  if(c<=5) return 90 - (c-3)*10/2; // 90..80
+  return Math.max(50, 80 - (c-5)*5);
+}
+function scoreLev(M){
+  // D/A in safe zone: 0.3..0.5; <0.1 under-leveraged, >0.7 over-leveraged
+  const d = M.da;
+  if(d<0.1) return 55 + d*100; // under-lev 55..65
+  if(d<=0.3) return 65 + (d-0.1)*150; // 65..95
+  if(d<=0.5) return 95 - (d-0.3)*50; // 95..85
+  if(d<=0.7) return 85 - (d-0.5)*200; // 85..45
+  return Math.max(0, 45 - (d-0.7)*150);
+}
+function scoreProf(M){
+  // ROE banded
+  const r = M.roe;
+  if(r<0) return Math.max(0, 30 + r*100);
+  if(r<0.05) return 30 + r*400; // 30..50
+  if(r<0.15) return 50 + (r-0.05)*300; // 50..80
+  if(r<0.25) return 80 + (r-0.15)*150; // 80..95
+  return Math.min(100, 95 + (r-0.25)*20);
+}
+function scoreEff(M){
+  // Cashgap < 30 days: great. > 120: bad.
+  const cg = M.cashgap;
+  if(!isFinite(cg)) return 50;
+  if(cg<=30) return 90;
+  if(cg<=60) return 80 - (cg-30)*0.3;
+  if(cg<=120) return 70 - (cg-60)*0.5;
+  return Math.max(0, 40 - (cg-120)*0.2);
+}
+function scoreGrow(M){
+  const g = M.revGrow;
+  if(g<-0.2) return 10;
+  if(g<0) return 30 + g*100;
+  if(g<0.1) return 50 + g*300;
+  if(g<0.3) return 80 + (g-0.1)*75;
+  return Math.min(100, 95 + (g-0.3)*15);
+}
+function scoreZ(M){
+  if(M.zZone==='safe') return 90;
+  if(M.zZone==='grey') return 60;
+  return 25;
+}
+
+function healthScore(M){
+  // user weights: 20-15-20-20-10-10 -> 95% -> normalize
+  const w = [20,15,20,20,10,10];
+  const sw = w.reduce((a,b)=>a+b,0);
+  const s = [scoreLiq(M),scoreLev(M),scoreProf(M),scoreEff(M),scoreGrow(M),scoreZ(M)];
+  let total = 0;
+  for(let i=0;i<6;i++) total += s[i]*w[i];
+  return {total: total/sw, parts:s};
+}
+
+function judge(score){
+  if(score>=80) return {flag:'ok',label:'Khỏe mạnh — tăng tốc được'};
+  if(score>=65) return {flag:'ok',label:'Ổn định — nên tối ưu'};
+  if(score>=50) return {flag:'warn',label:'Cần lưu ý — có rủi ro'};
+  if(score>=35) return {flag:'warn',label:'Yếu — cần can thiệp'};
+  return {flag:'bad',label:'Nguy cơ — cần hành động ngay'};
+}
+
+function badgeClass(score){
+  if(score>=70) return 'ok';
+  if(score>=50) return 'warn';
+  return 'bad';
+}
+
+/* ===== Renderers ===== */
+let charts = {};
+function destroyCharts(){
+  for(const k in charts){ try{charts[k].destroy();}catch(e){} }
+  charts = {};
+}
+
+function refresh(){
+  const I = getInputs();
+  const M = compute(I);
+  const HS = healthScore(M);
+  const J = judge(HS.total);
+  destroyCharts();
+
+  /* Header for PDF */
+  $('pdf_h_co').textContent = I.company;
+  $('pdf_h_kp').textContent = (I.period==='year'?'Năm ':I.period==='quarter'?'Quý ':'Tháng ') + I.year;
+  document.querySelectorAll('.pdf_co').forEach(el => el.textContent = I.company);
+  $('sig_co').textContent = I.company;
+  $('sig_date').textContent = new Date().toLocaleDateString('vi-VN');
+
+  /* Tab 1 totals */
+  $('o_ta').textContent = num(M.TA);
+  $('o_te').textContent = num(M.totalEquityLiab);
+  const diff = Math.abs(M.TA - M.totalEquityLiab);
+  $('o_diff').innerHTML = diff < 0.05 ? '<span class="flag ok">Cân</span>' : '<span class="flag bad">'+num(M.TA - M.totalEquityLiab)+'</span>';
+  $('o_gp').textContent = num(M.gp);
+  $('o_ebitda').textContent = num(M.ebitda);
+  $('o_ni').textContent = num(M.ni);
+
+  /* Slider labels */
+  $('sv_g').textContent = I.g*100+'%';
+  $('sv_wacc').textContent = I.wacc*100+'%';
+  $('sv_pb').textContent = I.pb_mult.toFixed(1)+'x';
+  $('sv_ev').textContent = I.ev_mult.toFixed(1)+'x';
+
+  /* ===== Tab 2: overview ===== */
+  $('hs_val').textContent = Math.round(HS.total);
+  $('hs_flag').className = 'flag '+J.flag;
+  $('hs_flag').textContent = J.label;
+  renderGauge(HS.total);
+
+  const vitals = [
+    {id:'liq', val:isFinite(M.current)?M.current.toFixed(2)+'x':'∞', score:HS.parts[0]},
+    {id:'lev', val:pct(M.da), score:HS.parts[1]},
+    {id:'prof',val:pct(M.roe), score:HS.parts[2]},
+    {id:'eff', val:Math.round(M.cashgap)+'d', score:HS.parts[3]},
+    {id:'grw', val:pct(M.revGrow), score:HS.parts[4]},
+    {id:'z',   val:M.zScore.toFixed(2), score:HS.parts[5]}
+  ];
+  vitals.forEach(v => {
+    $('v_'+v.id).textContent = v.val;
+    const bc = badgeClass(v.score);
+    const bel = $('b_'+v.id);
+    bel.className = 'badge '+bc;
+    bel.textContent = bc==='ok'?'Tốt':bc==='warn'?'Lưu ý':'Yếu';
+  });
+
+  renderDonut('c_asset', ['Tiền','Phải thu','Tồn kho','TS NH khác','TS dài hạn'],
+    [I.cash, I.ar, I.inv, I.otherca+I.stinv, M.NCA],
+    ['#1F7A4D','#5B9DCF','#B85C00','#94A3B8','#5B2A8A']);
+  renderDonut('c_equity', ['Nợ ngắn hạn','Nợ dài hạn','Vốn điều lệ','LN giữ lại'],
+    [M.CL, M.NCL, I.capital, I.retained],
+    ['#B85C00','#9C7A1F','#1F4E91','#1F7A4D']);
+  renderBarLine('c_revprofit', ['Kỳ trước','Kỳ này'],
+    [I.rev_prev, I.rev], [I.ni_prev, M.ni]);
+
+  $('overview_narr').innerHTML = narrateOverview(I, M, HS, J);
+
+  /* ===== Tab 3.1 Liquidity ===== */
+  $('liq_rows').innerHTML = renderRatios([
+    {name:'Current Ratio',sub:'TS ngắn hạn / Nợ ngắn hạn',val:M.current,unit:'x',bench:[1,1.5,3],
+      note: M.current<1 ? 'Thiếu khả năng thanh toán — cần huy động dòng tiền gấp.' :
+           M.current<=1.5 ? 'Vừa đủ — chưa có đệm an toàn.' :
+           M.current<=3 ? 'An toàn — đủ thanh khoản phục vụ vận hành.' :
+           'Thừa thanh khoản — vốn nhàn rỗi, cân nhắc đầu tư hoặc trả cổ tức.'},
+    {name:'Quick Ratio',sub:'(TSNH − Tồn kho) / Nợ NH',val:M.quick,unit:'x',bench:[0.7,1,2],
+      note: M.quick<0.7 ? 'Phụ thuộc tồn kho — rủi ro nếu hàng khó bán.' :
+           M.quick<=1 ? 'Mức tối thiểu — theo dõi sát.' :
+           M.quick<=2 ? 'Tốt — không phụ thuộc tồn kho.' :
+           'Rất cao — tiền + phải thu nhiều, kiểm tra chất lượng AR.'},
+    {name:'Cash Ratio',sub:'Tiền / Nợ ngắn hạn',val:M.cashRatio,unit:'x',bench:[0.2,0.5,1],
+      note: M.cashRatio<0.2 ? 'Tiền mặt mỏng — dễ gặp khủng hoảng thanh khoản.' :
+           M.cashRatio<=0.5 ? 'Đủ tiền ngắn hạn.' :
+           M.cashRatio<=1 ? 'Tiền dồi dào.' :
+           'Thừa tiền mặt — chi phí cơ hội cao.'}
+  ]);
+
+  /* ===== Tab 3.2 Leverage ===== */
+  $('lev_rows').innerHTML = renderRatios([
+    {name:'D/E (Nợ / VCSH)',sub:'Mức độ phụ thuộc nợ',val:M.de,unit:'x',bench:[0.3,1,2],
+      note: M.de<0.1 ? 'Đòn bẩy rất thấp — DN có thể bỏ lỡ cơ hội mở rộng.' :
+           M.de<=1 ? 'Cân đối — đòn bẩy hợp lý.' :
+           M.de<=2 ? 'Cao — chi phí lãi vay áp lực.' :
+           'Quá cao — rủi ro tài chính.'},
+    {name:'D/A (Nợ / Tổng TS)',sub:'Tỷ trọng nợ trong cơ cấu',val:M.da*100,unit:'%',bench:[20,40,60],
+      note: M.da<0.2 ? 'Sử dụng nợ thấp — an toàn nhưng kém tận dụng lợi thế thuế.' :
+           M.da<=0.5 ? 'Lành mạnh — chuẩn ngành.' :
+           'Cao — cần kiểm soát chi phí tài chính.'},
+    {name:'Interest Coverage',sub:'EBIT / Lãi vay',val:isFinite(M.intCov)?M.intCov:999,unit:'x',bench:[1.5,3,5],
+      note: I.int_<=0 ? 'Không có chi phí lãi vay.' :
+           M.intCov<1.5 ? 'Khả năng trả lãi yếu — rủi ro vỡ nợ.' :
+           M.intCov<3 ? 'Cần thận trọng.' :
+           'Tốt — trả lãi không áp lực.'}
+  ]);
+
+  // Asset-liability matching
+  const matchOK = M.NCA <= (M.NCL + M.equity);
+  $('match_rule').innerHTML = matchOK
+    ? '<span class="flag ok">✓ Hợp lý</span> Tài sản dài hạn ('+num(M.NCA)+') được tài trợ bởi nguồn vốn dài hạn (Nợ DH + VCSH = '+num(M.NCL+M.equity)+'). Nguyên tắc phối hợp kỳ hạn được tuân thủ.'
+    : '<span class="flag bad">✗ Vi phạm</span> Tài sản dài hạn ('+num(M.NCA)+') vượt nguồn vốn dài hạn ('+num(M.NCL+M.equity)+'). Đang dùng vốn ngắn hạn để tài trợ TS dài hạn — sai lầm tài chính kinh điển.';
+  $('match_rule').style.background = matchOK ? '#DCFCE7' : '#FEE2E2';
+
+  /* ===== Tab 3.3 Profitability ===== */
+  $('prof_rows').innerHTML = renderRatios([
+    {name:'Gross Margin',sub:'LN gộp / DT',val:M.grossMargin*100,unit:'%',bench:[15,30,50],
+      note: M.grossMargin<0.15 ? 'Biên gộp thấp — đặc thù ngành hoặc đang phá giá.' :
+           M.grossMargin<0.3 ? 'Trung bình — có dư địa tối ưu giá vốn.' :
+           'Tốt — định giá và quản trị giá vốn ổn.'},
+    {name:'ROS (Net Margin)',sub:'LN sau thuế / DT',val:M.ros*100,unit:'%',bench:[3,8,15],
+      note: M.ros<0 ? 'Lỗ ròng — soát chi phí cố định và OPEX.' :
+           M.ros<0.05 ? 'Biên ròng mỏng — dễ tổn thương khi chi phí tăng.' :
+           M.ros<0.15 ? 'Khá tốt — tiếp tục tối ưu.' :
+           'Rất tốt — biên lợi nhuận cao.'},
+    {name:'ROA',sub:'LN / Tổng TS',val:M.roa*100,unit:'%',bench:[3,7,12],
+      note: M.roa<0.03 ? 'Tài sản chưa tạo ra lợi nhuận hiệu quả.' :
+           M.roa<0.07 ? 'Hiệu quả tài sản trung bình.' :
+           'Hiệu quả tài sản tốt.'},
+    {name:'ROE',sub:'LN / Vốn CSH',val:M.roe*100,unit:'%',bench:[10,15,25],
+      note: M.roe<0.1 ? 'Cổ đông chưa được hưởng lợi tốt.' :
+           M.roe<0.2 ? 'Tốt — vượt mặt bằng gửi tiết kiệm.' :
+           'Rất tốt — sinh lời cao cho cổ đông.'},
+    {name:'ROIC',sub:'NOPAT / Vốn đầu tư',val:M.roic*100,unit:'%',bench:[8,12,20],
+      note: M.roic<0.08 ? 'Vốn đầu tư chưa sinh lời tương xứng.' :
+           M.roic<0.15 ? 'Sinh lời vốn đầu tư hợp lý.' :
+           'Sinh lời vốn đầu tư cao — vượt WACC.'}
+  ]);
+  renderDuPont(M);
+
+  /* ===== Tab 3.4 Efficiency ===== */
+  $('eff_rows').innerHTML = renderRatios([
+    {name:'DSO',sub:'Số ngày thu tiền',val:M.dso,unit:'ngày',bench:[30,60,90],invert:true,
+      note: M.dso<30 ? 'Thu tiền nhanh — quản trị AR tốt.' :
+           M.dso<60 ? 'Bình thường theo chuẩn ngành.' :
+           M.dso<90 ? 'Chậm — kiểm tra chất lượng khoản phải thu.' :
+           'Rất chậm — rủi ro thu hồi.'},
+    {name:'DIO',sub:'Số ngày tồn kho',val:M.dio,unit:'ngày',bench:[30,60,120],invert:true,
+      note: M.dio<30 ? 'Vòng quay tồn kho nhanh.' :
+           M.dio<60 ? 'Mức an toàn.' :
+           M.dio<120 ? 'Tồn kho cao — vốn bị giam.' :
+           'Tồn kho quá cao — rủi ro hư hỏng/lỗi mốt.'},
+    {name:'DPO',sub:'Số ngày trả NCC',val:M.dpo,unit:'ngày',bench:[15,30,60],
+      note: M.dpo<15 ? 'Trả nhanh — chưa tận dụng tín dụng NCC.' :
+           M.dpo<60 ? 'Bình thường.' :
+           'Cao — cẩn thận uy tín với NCC.'},
+    {name:'Cashgap',sub:'DSO + DIO − DPO',val:M.cashgap,unit:'ngày',bench:[30,60,120],invert:true,
+      note: M.cashgap<30 ? 'Vòng quay tiền rất nhanh — DN tự tài trợ vốn lưu động.' :
+           M.cashgap<60 ? 'Hợp lý.' :
+           M.cashgap<120 ? 'Tiền kẹt nhiều — cần vốn lưu động bên ngoài.' :
+           'Vốn lưu động bị giam quá lâu — rủi ro lớn.'},
+    {name:'Asset Turnover',sub:'DT năm / Tổng TS',val:M.assetTurnover,unit:'x',bench:[0.5,1,2],
+      note: M.assetTurnover<0.5 ? 'Tài sản chưa được khai thác tối đa.' :
+           M.assetTurnover<1 ? 'Hiệu suất tài sản bình thường.' :
+           'Tài sản tạo doanh thu tốt.'}
+  ]);
+  renderCashgap(M);
+
+  /* ===== Tab 3.5 BEP ===== */
+  $('bep_rev').textContent = isFinite(M.bepRev) ? num(M.bepRev) : 'Không tính được';
+  $('bep_q').textContent = isFinite(M.bepQ) ? Math.round(M.bepQ).toLocaleString() : '— (chưa nhập giá đơn vị)';
+  $('bep_mos').textContent = pct(M.mos);
+  renderBEP(I, M);
+
+  /* ===== Tab 3.6 Growth ===== */
+  $('grw_cards').innerHTML = `
+    <div class="val-card"><div class="ttl">Tăng trưởng doanh thu</div><div class="num" style="color:${M.revGrow>=0?'var(--ok)':'var(--bad)'}">${pct(M.revGrow)}</div><div class="hint">Từ ${num(I.rev_prev)} → ${num(I.rev)}</div></div>
+    <div class="val-card"><div class="ttl">Tăng trưởng lợi nhuận</div><div class="num" style="color:${M.niGrow>=0?'var(--ok)':'var(--bad)'}">${pct(M.niGrow)}</div><div class="hint">Từ ${num(I.ni_prev)} → ${num(M.ni)}</div></div>
+    <div class="val-card"><div class="ttl">Chỉ số tăng trưởng bền vững (SGR ước)</div><div class="num">${pct(M.roe*0.6)}</div><div class="hint">Giả định payout 40%, ROE × (1−payout)</div></div>
+  `;
+
+  /* ===== Tab 3.7 Z-score ===== */
+  $('z_val').textContent = M.zScore.toFixed(2);
+  $('z_zone').textContent = M.zZoneLabel;
+  $('z_zone').style.color = M.zZone==='safe'?'var(--ok)':M.zZone==='grey'?'var(--warn)':'var(--bad)';
+  $('z_explain').innerHTML = explainZ(M, I);
+  renderZScore(M, I);
+
+  /* ===== Tab 4 Valuation ===== */
+  $('val_nav').textContent = num(M.navVal);
+  $('val_pb').textContent = num(M.pbVal);
+  $('val_ev').textContent = num(M.evVal);
+  $('val_dcf').textContent = isFinite(M.dcfVal) ? num(M.dcfVal) : 'Không tính được (WACC ≤ g)';
+  const vals = [M.navVal, M.pbVal, M.evVal, isFinite(M.dcfVal)?M.dcfVal:null].filter(v=>v!==null && isFinite(v));
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+  $('val_range').textContent = num(lo) + ' — ' + num(hi);
+  $('val_avg').textContent = num(avg);
+  $('val_note').textContent = 'Định giá chỉ mang tính tham khảo. NAV là sàn (giá trị thanh lý), DCF phụ thuộc giả định g & WACC, EV/EBITDA và P/B phụ thuộc multiple ngành.';
+  renderValuation([M.navVal, M.pbVal, M.evVal, isFinite(M.dcfVal)?M.dcfVal:0]);
+
+  /* ===== Tab 5 Advisor ===== */
+  renderAdvisor(I, M, HS, J);
+}
+
+function renderRatios(rows){
+  return rows.map(r => {
+    const v = r.val;
+    const [g, y, gg] = r.bench;
+    let flag;
+    if(r.invert){
+      flag = v<=g?'ok':v<=y?'warn':'bad';
+    } else {
+      flag = v>=gg?'ok':v>=g?'warn':'bad';
+    }
+    const barPct = Math.min(100, Math.max(5, (v / (r.invert?gg*1.5:gg*1.5))*100));
+    const barColor = flag==='ok'?'var(--ok)':flag==='warn'?'var(--warn)':'var(--bad)';
+    const displayVal = (r.unit==='%') ? v.toFixed(1)+'%' :
+                       (r.unit==='ngày') ? Math.round(v)+'d' :
+                       (isFinite(v) ? v.toFixed(2)+'x' : '∞');
+    return `<div class="ratio-row">
+      <div class="name">${r.name}<small>${r.sub}</small></div>
+      <div class="val">${displayVal}</div>
+      <div class="bar"><i style="width:${barPct}%;background:${barColor}"></i></div>
+      <div class="note">${r.note}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ====== Charts ====== */
+function renderGauge(score){
+  const ctx = $('gauge');
+  charts.gauge = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      datasets:[{
+        data:[score, 100-score],
+        backgroundColor:[score>=70?'#1F7A4D':score>=50?'#C9A23A':'#B91C1C','#E5E7EB'],
+        borderWidth:0,
+        circumference:180,
+        rotation:270
+      }]
+    },
+    options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}},responsive:true,maintainAspectRatio:false}
+  });
+}
+function renderDonut(id, labels, data, colors){
+  charts[id] = new Chart($(id),{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:1,borderColor:'#fff'}]},
+    options:{cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},responsive:true,maintainAspectRatio:false}
+  });
+}
+function renderBarLine(id, labels, rev, ni){
+  charts[id] = new Chart($(id),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Doanh thu',data:rev,backgroundColor:'#C9A23A',yAxisID:'y'},
+      {type:'line',label:'Lợi nhuận',data:ni,borderColor:'#1F7A4D',backgroundColor:'#1F7A4D',tension:0.3,yAxisID:'y'}
+    ]},
+    options:{plugins:{legend:{position:'bottom'}},responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
+  });
+}
+function renderDuPont(M){
+  charts.dupont = new Chart($('c_dupont'),{
+    type:'bar',
+    data:{labels:['ROS','Vòng quay TS','Đòn bẩy TC','= ROE'],
+      datasets:[{data:[M.ros*100, M.assetTurnover, M.TA/Math.max(M.equity,0.0001), M.roe*100],
+        backgroundColor:['#5B9DCF','#C9A23A','#B85C00','#1F7A4D']}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+      const idx=ctx.dataIndex;
+      const v=ctx.parsed.x;
+      if(idx===0) return 'ROS: '+v.toFixed(1)+'%';
+      if(idx===1) return 'Asset turnover: '+v.toFixed(2)+'x';
+      if(idx===2) return 'Equity multiplier: '+v.toFixed(2)+'x';
+      return 'ROE: '+v.toFixed(1)+'%';
+    }}}},responsive:true,maintainAspectRatio:false}
+  });
+}
+function renderCashgap(M){
+  charts.cashgap = new Chart($('c_cashgap'),{
+    type:'bar',
+    data:{labels:['DSO','DIO','− DPO','= Cashgap'],
+      datasets:[{data:[M.dso, M.dio, -M.dpo, M.cashgap],
+        backgroundColor:['#5B9DCF','#B85C00','#94A3B8','#C9A23A']}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y)+' ngày'}}},responsive:true,maintainAspectRatio:false}
+  });
+}
+function renderBEP(I, M){
+  const maxRev = Math.max(I.rev*1.4, M.bepRev*1.2 || 0, 1);
+  const steps = 10;
+  const labels = [], totalCost = [], totalRev = [];
+  for(let i=0;i<=steps;i++){
+    const x = (maxRev*i)/steps;
+    labels.push(x.toFixed(1));
+    const ratio = I.rev>0 ? (I.cogs+I.vc)/I.rev : 0.7;
+    totalCost.push(I.fc + ratio*x);
+    totalRev.push(x);
+  }
+  charts.bep = new Chart($('c_bep'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Doanh thu',data:totalRev,borderColor:'#1F7A4D',backgroundColor:'rgba(31,122,77,0.1)',tension:0},
+      {label:'Tổng chi phí',data:totalCost,borderColor:'#B85C00',backgroundColor:'rgba(184,92,0,0.1)',tension:0}
+    ]},
+    options:{plugins:{legend:{position:'bottom'},title:{display:true,text:'Doanh thu hòa vốn ≈ '+num(M.bepRev)}},responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Doanh thu'}}}}
+  });
+}
+function renderZScore(M, I){
+  const safe = I.industry==='manufacturing' ? 2.9 : 2.6;
+  const grey = I.industry==='manufacturing' ? 1.23 : 1.1;
+  charts.z = new Chart($('c_zscore'),{
+    type:'bar',
+    data:{labels:['Nguy hiểm','Vùng xám','An toàn','DN của bạn'],
+      datasets:[{data:[grey, safe-grey, Math.max(safe*1.5-safe,1), M.zScore],
+        backgroundColor:['#FEE2E2','#FEF3C7','#DCFCE7', M.zZone==='safe'?'#1F7A4D':M.zZone==='grey'?'#C9A23A':'#B91C1C']}]},
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
+  });
+}
+function renderValuation(vals){
+  charts.val = new Chart($('c_valuation'),{
+    type:'bar',
+    data:{labels:['NAV','P/B','EV/EBITDA','DCF'],
+      datasets:[{label:'Giá trị DN',data:vals,backgroundColor:['#5B2A8A','#1F4E91','#B85C00','#1F7A4D']}]},
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:'Tỷ VND'}}}}
+  });
+}
+
+function explainZ(M, I){
+  const formula = I.industry==='manufacturing'
+    ? 'Z′ = 0.717·X1 + 0.847·X2 + 3.107·X3 + 0.420·X4 + 0.998·X5'
+    : 'Z″ = 6.56·X1 + 3.26·X2 + 6.72·X3 + 1.05·X4 (phi sản xuất)';
+  return `${formula}<br>
+    X1 (Vốn lưu động/TS) = ${num(M.X1)} · X2 (LN giữ lại/TS) = ${num(M.X2)} · X3 (EBIT/TS) = ${num(M.X3)} · X4 (VCSH/Nợ) = ${num(M.X4)} ${I.industry==='manufacturing'?'· X5 (DT/TS) = '+num(M.X5):''}`;
+}
+
+/* ====== Narrative & Advisor ====== */
+function narrateOverview(I, M, HS, J){
+  const parts = [];
+  parts.push(`<b>${I.company}</b> đang ở mức <b>${J.label}</b> với Health Score <b>${Math.round(HS.total)}/100</b>.`);
+  if(HS.parts[0]>=70) parts.push(`Thanh khoản <b style="color:var(--ok)">tốt</b> (Current ${isFinite(M.current)?M.current.toFixed(2):'∞'}x)`);
+  else if(HS.parts[0]<50) parts.push(`Thanh khoản <b style="color:var(--bad)">đáng lo</b>`);
+  if(HS.parts[1]<60) parts.push(`đòn bẩy ${M.da<0.1?'quá thấp — bỏ lỡ cơ hội mở rộng':'cao — kiểm soát rủi ro'}`);
+  if(HS.parts[3]<60) parts.push(`vòng quay tiền <b>${Math.round(M.cashgap)} ngày</b> đang giam vốn lưu động`);
+  if(HS.parts[2]<50) parts.push(`sinh lời (ROE ${pct(M.roe)}) ở mức thấp`);
+  else if(HS.parts[2]>=80) parts.push(`sinh lời cao (ROE <b>${pct(M.roe)}</b>)`);
+  if(M.zZone==='distress') parts.push(`<b style="color:var(--bad)">cảnh báo: Z-score trong vùng nguy hiểm</b>`);
+  parts.push(`Tăng trưởng doanh thu kỳ này <b>${pct(M.revGrow)}</b>.`);
+  return parts.join('. ') + '.';
+}
+
+function renderAdvisor(I, M, HS, J){
+  // Summary
+  $('adv_summary').innerHTML = narrateOverview(I, M, HS, J) + ` Báo cáo này phân tích sức khỏe tài chính dưới góc nhìn của một business advisor — kết hợp diễn giải và khuyến nghị hành động cụ thể.`;
+
+  // Strengths
+  const S = [];
+  if(M.current>=2) S.push(`Thanh khoản dồi dào (Current Ratio ${num(M.current)}x) — đệm an toàn lớn trước biến động.`);
+  if(M.grossMargin>=0.25) S.push(`Biên gộp ${pct(M.grossMargin)} — định giá và quản trị giá vốn ổn định.`);
+  if(M.da<0.2) S.push(`Cơ cấu vốn an toàn (D/A ${pct(M.da)}) — ít rủi ro tài chính.`);
+  if(M.roe>=0.15) S.push(`ROE ${pct(M.roe)} — cổ đông được hưởng lợi tốt từ vốn đầu tư.`);
+  if(M.cashgap<60) S.push(`Vòng quay tiền nhanh (${Math.round(M.cashgap)} ngày) — DN tự tài trợ được vốn lưu động.`);
+  if(M.revGrow>=0.1) S.push(`Tăng trưởng doanh thu ${pct(M.revGrow)} — đà tích cực.`);
+  if(M.zZone==='safe') S.push(`Z-score ${num(M.zScore)} — nằm trong vùng an toàn theo mô hình Altman.`);
+  if(M.cfo>0) S.push(`Dòng tiền hoạt động kinh doanh dương (${num(I.cfo)}) — kinh doanh tạo tiền thật.`);
+  if(S.length===0) S.push(`Cần soát kỹ hơn — chưa thấy điểm mạnh nổi bật.`);
+  $('adv_strengths').innerHTML = S.slice(0,5).map(s => '<li>'+s+'</li>').join('');
+
+  // Risks
+  const R = [];
+  if(M.current<1) R.push(`Current Ratio ${num(M.current)}x — không đủ TSNH trả nợ NH, rủi ro mất thanh khoản.`);
+  if(M.current>5) R.push(`Thanh khoản ${num(M.current)}x — quá cao, có thể là vốn nhàn rỗi, chi phí cơ hội lớn.`);
+  if(M.da<0.1) R.push(`Đòn bẩy quá thấp (D/A ${pct(M.da)}) — DN bỏ lỡ lợi thế từ vốn vay rẻ và lá chắn thuế.`);
+  if(M.da>0.6) R.push(`Đòn bẩy cao (D/A ${pct(M.da)}) — áp lực tài chính, dễ tổn thương khi lãi suất tăng.`);
+  if(M.cashgap>90) R.push(`Cashgap ${Math.round(M.cashgap)} ngày — vốn lưu động bị giam quá lâu, cần huy động vốn ngoài.`);
+  if(M.dio>120) R.push(`Tồn kho ${Math.round(M.dio)} ngày — rủi ro hư hỏng, lỗi mốt, vốn bị giam.`);
+  if(M.dso>90) R.push(`DSO ${Math.round(M.dso)} ngày — thu tiền chậm, cần soát chất lượng phải thu.`);
+  if(M.ros<0.03 && M.ros>0) R.push(`Biên ròng ${pct(M.ros)} mỏng — dễ tổn thương khi chi phí tăng.`);
+  if(M.ros<0) R.push(`Đang lỗ ròng (${pct(M.ros)}) — cần can thiệp ngay vào cơ cấu chi phí.`);
+  if(M.revGrow<0) R.push(`Doanh thu giảm ${pct(M.revGrow)} — cần soát lại chiến lược thị trường/khách hàng.`);
+  if(M.zZone==='distress') R.push(`Z-score ${num(M.zScore)} — vùng nguy hiểm phá sản theo Altman.`);
+  if(M.ar > I.rev*0.3) R.push(`Phải thu KH chiếm ${pct(I.ar/I.rev)} doanh thu — tập trung rủi ro vào một số khách lớn?`);
+  if(R.length===0) R.push(`Chưa phát hiện rủi ro lớn — vẫn nên duy trì kiểm soát chặt.`);
+  $('adv_risks').innerHTML = R.slice(0,5).map(s => '<li>'+s+'</li>').join('');
+
+  // 30/60/90
+  const a30 = [], a60 = [], a90 = [];
+  if(M.cashgap>60){
+    a30.push('Soát danh sách khoản phải thu, gọi thu các khách hàng quá hạn >30 ngày.');
+    a60.push('Đàm phán kéo dài DPO với 3 NCC lớn nhất thêm 15 ngày.');
+    a90.push('Thiết lập chính sách tín dụng KH: hạn mức, kỳ hạn, đặt cọc.');
+  }
+  if(M.dio>90){
+    a30.push('Phân loại ABC tồn kho — xác định 20% SKU chiếm 80% giá trị.');
+    a60.push('Triển khai chương trình xả tồn kho slow-moving.');
+    a90.push('Áp dụng tồn kho an toàn (safety stock) theo từng nhóm SP.');
+  }
+  if(M.da<0.15){
+    a30.push('Khảo sát lãi vay ngân hàng và so sánh với ROIC hiện tại.');
+    a60.push('Xem xét vay vốn lưu động ngắn hạn để mở rộng hoạt động.');
+    a90.push('Lập kế hoạch huy động vốn cho dự án tăng trưởng 2 năm tới.');
+  }
+  if(M.ros<0.05){
+    a30.push('Audit chi phí cố định hàng tháng — cắt giảm các khoản không thiết yếu.');
+    a60.push('Tăng giá bán nhóm SP có sức cạnh tranh cao (test A/B).');
+    a90.push('Tái cấu trúc cơ cấu chi phí: chuyển bớt cố định sang biến đổi.');
+  }
+  if(M.revGrow<0.05){
+    a30.push('Phỏng vấn 10 khách hàng cũ chưa mua lại trong 6 tháng.');
+    a60.push('Thiết kế campaign tăng đơn hàng trung bình (upsell/cross-sell).');
+    a90.push('Mở thêm 1 kênh phân phối mới (online, đại lý, B2B...).');
+  }
+  if(a30.length===0){
+    a30.push('Duy trì dashboard theo dõi sức khỏe hàng tháng.');
+    a60.push('Tổ chức session review tài chính với BGĐ định kỳ.');
+    a90.push('Lập kế hoạch tài chính 3 năm và OKR theo quý.');
+  }
+  $('adv_30').innerHTML = '<ul style="margin:0;padding-left:18px">'+a30.slice(0,3).map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+  $('adv_60').innerHTML = '<ul style="margin:0;padding-left:18px">'+a60.slice(0,3).map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+  $('adv_90').innerHTML = '<ul style="margin:0;padding-left:18px">'+a90.slice(0,3).map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+
+  // Coaching questions
+  const Q = [
+    `Nếu tôi nói rằng vòng quay tiền của anh/chị là ${Math.round(M.cashgap)} ngày — con số đó kể câu chuyện gì về cách công ty đang vận hành?`,
+    `ROE ${pct(M.roe)} so với kỳ vọng ban đầu của anh/chị thì nó nói lên điều gì?`,
+    `Nếu ngày mai doanh thu sụt 30%, công ty có chịu đựng được bao lâu trước khi cần can thiệp?`,
+    `Trong cơ cấu tài sản của công ty, đâu là tài sản đang sinh tiền và đâu là tài sản đang "ngủ"?`,
+    `Anh/chị thấy gì giữa con số tăng trưởng doanh thu ${pct(M.revGrow)} và tăng trưởng lợi nhuận ${pct(M.niGrow)} — chúng đang kể gì khác nhau?`,
+    `Nếu phải chọn 1 chỉ số duy nhất để theo dõi mỗi sáng, anh/chị chọn cái nào? Vì sao?`,
+    `Đâu là điểm mạnh tài chính mà có thể anh/chị đang chưa khai thác triệt để?`
+  ];
+  $('adv_questions').innerHTML = Q.slice(0,6).map(q => '<li style="margin-bottom:6px">'+q+'</li>').join('');
+}
+
+/* ====== Tab nav ====== */
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('section.tab').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    $('tab-'+btn.dataset.tab).classList.add('active');
+  };
+});
+
+/* ====== Buttons ====== */
+$('btnReset').onclick = () => {
+  if(confirm('Xóa toàn bộ dữ liệu nhập?')){
+    document.querySelectorAll('.i').forEach(el => {
+      if(el.type==='number') el.value = '';
+    });
+    refresh();
+  }
+};
+$('btnLoadAZ').onclick = loadAZ;
+$('btnPDF').onclick = () => {
+  document.querySelectorAll('section.tab').forEach(s => s.classList.add('active'));
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{
+      document.querySelectorAll('section.tab').forEach(s => s.classList.remove('active'));
+      document.querySelector('nav.tabs button.active')?.click();
+    }, 500);
+  }, 200);
+};
+
+/* ====== Reactive ====== */
+document.querySelectorAll('.i, #i_company, #i_industry, #i_period, #i_unit, #i_year, #i_shares').forEach(el => {
+  el.addEventListener('input', refresh);
+  el.addEventListener('change', refresh);
+});
+
+/* ====== Init ====== */
+refresh();
+</script>
+
+</body>
+</html>
